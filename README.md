@@ -2,6 +2,8 @@
 
 Herramienta web diseñada para proteger documentos sensibles (como DNI, NIE, pasaportes, facturas o contratos) antes de compartirlos por medios digitales. Aplica conversión a blanco y negro con ajuste de contraste y marcas de agua de seguridad diagonales, ejecutándose íntegramente en el navegador sin transferir archivos a ningún servidor externo.
 
+🌐 **Demo en vivo (GitHub Pages):** [https://josescobedov.github.io/securdoc-local/](https://josescobedov.github.io/securdoc-local/)
+
 ---
 
 ## 🔒 Privacidad y Seguridad
