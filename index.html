@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecurDoc Local - Blanco y Negro + Marca de Agua PDF</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js para renderizado local de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- jsPDF para generación local de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Fuentes modernas -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        oled: '#000000',
+                        surface: '#0A0A0A',
+                        panel: '#121212',
+                        borderDark: '#222222',
+                        emeraldNeon: '#00FF66',
+                        emeraldDim: 'rgba(0, 255, 102, 0.12)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #000000;
+            color: #F3F4F6;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Estilo técnico personalizado para sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #222222;
+            height: 6px;
+            border-radius: 999px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00FF66;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #00FF66;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+        }
+
+        /* Scrollbar sutil */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #262626;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00FF66;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emeraldNeon selection:text-black">
+
+    <!-- Barra Superior -->
+    <header class="border-b border-borderDark bg-surface/90 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-emeraldDim border border-emeraldNeon/40 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-emeraldNeon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">SecurDoc <span class="text-emeraldNeon font-mono text-xs px-1.5 py-0.5 rounded bg-emeraldDim border border-emeraldNeon/30 ml-1">LOCAL</span></h1>
+                </div>
+            </div>
+
+            <!-- Indicador de Privacidad 100% Local -->
+            <div class="flex items-center space-x-2 bg-panel border border-borderDark px-3 py-1.5 rounded-full">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emeraldNeon opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emeraldNeon"></span>
+                </span>
+                <span class="text-xs font-mono text-gray-300 hidden sm:inline">Procesamiento 100% Local (Sin conexión)</span>
+                <span class="text-xs font-mono text-gray-300 sm:hidden">100% Local</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notificación / Mensaje de Estado Flotante -->
+    <div id="toastMessage" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div class="bg-panel border border-emeraldNeon/50 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3">
+            <svg class="w-5 h-5 text-emeraldNeon shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span id="toastText" class="text-sm font-medium">Documento procesado</span>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Panel Lateral de Controles (4 columnas en desktop) -->
+        <aside class="lg:col-span-4 space-y-5">
+            
+            <!-- 1. Carga de Archivos -->
+            <div class="bg-panel border border-borderDark rounded-2xl p-5">
+                <h2 class="text-xs font-mono uppercase tracking-wider text-gray-400 mb-3 flex items-center justify-between">
+                    <span>01. Documento Origen</span>
+                    <span id="pageCountBadge" class="text-emeraldNeon hidden">0 págs</span>
+                </h2>
+                
+                <label id="dropZone" for="fileInput" class="border-2 border-dashed border-borderDark hover:border-emeraldNeon/70 bg-surface/50 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group">
+                    <div class="w-12 h-12 rounded-full bg-panel border border-borderDark group-hover:border-emeraldNeon/50 flex items-center justify-center mb-3 transition-colors">
+                        <svg class="w-6 h-6 text-gray-400 group-hover:text-emeraldNeon transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-medium text-white mb-1">Selecciona tu PDF o Imágenes</p>
+                    <p class="text-xs text-gray-500">Soporta PDF multipágina, JPG y PNG</p>
+                    <input type="file" id="fileInput" accept="application/pdf,image/jpeg,image/png,image/webp" multiple class="hidden">
+                </label>
+                <div id="fileNameDisplay" class="mt-3 text-xs font-mono text-emeraldNeon truncate hidden"></div>
+            </div>
+
+            <!-- 2. Filtro Blanco y Negro -->
+            <div class="bg-panel border border-borderDark rounded-2xl p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-mono uppercase tracking-wider text-gray-400">02. Capa Blanco y Negro</h2>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="bwToggle" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-borderDark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-black after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 peer-checked:after:bg-black after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emeraldNeon relative"></div>
+                    </label>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="text-gray-400">Contraste (Legibilidad)</span>
+                        <span id="contrastVal" class="font-mono text-emeraldNeon">110%</span>
+                    </div>
+                    <input type="range" id="contrastSlider" min="70" max="160" value="110" class="w-full">
+                </div>
+            </div>
+
+            <!-- 3. Marca de Agua Diagonal -->
+            <div class="bg-panel border border-borderDark rounded-2xl p-5 space-y-4">
+                <h2 class="text-xs font-mono uppercase tracking-wider text-gray-400">03. Marca de Agua Diagonal</h2>
+                
+                <!-- Campo de Texto -->
+                <div>
+                    <label for="watermarkText" class="block text-xs text-gray-400 mb-1.5">Texto de la marca</label>
+                    <input type="text" id="watermarkText" value="Texto" placeholder="Escribe el texto de seguridad..." class="w-full bg-surface border border-borderDark focus:border-emeraldNeon rounded-xl px-3.5 py-2.5 text-sm text-white font-mono outline-none transition-colors">
+                </div>
+
+                <!-- Patrón -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1.5">Distribución en página</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="patternSingleBtn" class="pattern-btn active px-3 py-2 rounded-xl text-xs font-medium border border-emeraldNeon bg-emeraldDim text-emeraldNeon transition-all">
+                            Única Diagonal
+                        </button>
+                        <button type="button" id="patternTiledBtn" class="pattern-btn px-3 py-2 rounded-xl text-xs font-medium border border-borderDark bg-surface text-gray-400 hover:text-white transition-all">
+                            Mosaico Repetido
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tamaño de Fuente -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <span class="text-gray-400">Tamaño de fuente</span>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" id="fitDiagonalBtn" class="font-mono text-[10px] px-2 py-0.5 rounded bg-emeraldNeon text-black font-bold transition-all">
+                                Auto-ajustar diagonal
+                            </button>
+                            <span id="sizeVal" class="font-mono text-emeraldNeon">Auto</span>
+                        </div>
+                    </div>
+                    <input type="range" id="sizeSlider" min="16" max="300" value="95" class="w-full">
+                </div>
+
+                <!-- Salto de línea automático -->
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-xs text-gray-400">Dividir en 2 líneas si es largo</span>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="multiLineToggle" class="sr-only peer">
+                        <div class="w-8 h-4 bg-borderDark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-black after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 peer-checked:after:bg-black after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emeraldNeon relative"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Botón de Exportación -->
+            <button type="button" id="downloadPdfBtn" disabled class="w-full py-3.5 px-5 rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all bg-borderDark text-gray-500 cursor-not-allowed">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                <span>Descargar PDF Protegido</span>
+            </button>
+
+        </aside>
+
+        <!-- Área de Vista Previa en Tiempo Real (8 columnas en desktop) -->
+        <section class="lg:col-span-8 bg-panel border border-borderDark rounded-2xl p-4 sm:p-6 flex flex-col min-h-[550px]">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-borderDark">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-emeraldNeon"></span>
+                    <h2 class="text-xs font-mono uppercase tracking-wider text-gray-300">Vista Previa en Tiempo Real</h2>
+                </div>
+                <span id="statusIndicator" class="text-xs font-mono text-gray-500">Esperando archivo...</span>
+            </div>
+
+            <!-- Contenedor de Páginas Renderizadas -->
+            <div id="previewContainer" class="flex-1 flex flex-col items-center justify-center space-y-6 overflow-y-auto max-h-[78vh] pr-1">
+                
+                <!-- Estado Vacío Inicial -->
+                <div id="emptyState" class="text-center max-w-sm py-12">
+                    <div class="w-16 h-16 rounded-2xl bg-surface border border-borderDark flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-semibold text-gray-300 mb-1">Ningún documento cargado</h3>
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                        Sube el PDF o las fotos de tu DNI en el panel izquierdo. Todo el procesamiento se realiza en la memoria de tu navegador sin conexión externa.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Configuración del worker de PDF.js vía CDN fiable
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Estado de la aplicación
+        const state = {
+            rawPages: [], // Almacena objetos { imageData: ImageData, width: number, height: number } originales en alta resolución
+            fileName: 'documento_protegido',
+            bwEnabled: true,
+            contrast: 110,
+            watermarkText: 'Texto',
+            pattern: 'single', // 'single' | 'tiled'
+            opacity: 0.28,
+            fontSize: 95,
+            autoFit: true,
+            multiLine: false
+        };
+
+        // Referencias DOM
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const pageCountBadge = document.getElementById('pageCountBadge');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const previewContainer = document.getElementById('previewContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        const bwToggle = document.getElementById('bwToggle');
+        const contrastSlider = document.getElementById('contrastSlider');
+        const contrastVal = document.getElementById('contrastVal');
+
+        const watermarkText = document.getElementById('watermarkText');
+        const patternSingleBtn = document.getElementById('patternSingleBtn');
+        const patternTiledBtn = document.getElementById('patternTiledBtn');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeVal = document.getElementById('sizeVal');
+        const fitDiagonalBtn = document.getElementById('fitDiagonalBtn');
+        const multiLineToggle = document.getElementById('multiLineToggle');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+        // Función auxiliar para notificaciones sin alert()
+        function showToast(msg) {
+            const toast = document.getElementById('toastMessage');
+            const toastText = document.getElementById('toastText');
+            toastText.textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // Eventos de Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('border-emeraldNeon', 'bg-emeraldDim');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('border-emeraldNeon', 'bg-emeraldDim');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                handleFiles(files);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+
+        // Procesamiento inicial de archivos (PDF o Imágenes)
+        async function handleFiles(files) {
+            try {
+                statusIndicator.textContent = 'Cargando en memoria local...';
+                statusIndicator.className = 'text-xs font-mono text-emeraldNeon animate-pulse';
+                state.rawPages = [];
+
+                const firstFile = files[0];
+                state.fileName = firstFile.name.replace(/\.[^/.]+$/, "");
+                fileNameDisplay.textContent = files.length > 1 
+                    ? `${files.length} archivos seleccionados` 
+                    : `Archivo: ${firstFile.name}`;
+                fileNameDisplay.classList.remove('hidden');
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type === 'application/pdf') {
+                        await extractPdfPages(file);
+                    } else if (file.type.startsWith('image/')) {
+                        await extractImagePage(file);
+                    }
+                }
+
+                if (state.rawPages.length > 0) {
+                    pageCountBadge.textContent = `${state.rawPages.length} ${state.rawPages.length === 1 ? 'pág' : 'págs'}`;
+                    pageCountBadge.classList.remove('hidden');
+                    enableDownloadButton();
+                    renderAllPages();
+                    showToast(`${state.rawPages.length} página(s) lista(s) en local`);
+                } else {
+                    statusIndicator.textContent = 'Formato no compatible';
+                    statusIndicator.className = 'text-xs font-mono text-red-400';
+                }
+            } catch (error) {
+                console.error('Error procesando archivo:', error);
+                statusIndicator.textContent = 'Error al leer documento';
+                statusIndicator.className = 'text-xs font-mono text-red-400';
+                showToast('Error al procesar el archivo. Verifica que no tenga contraseña.');
+            }
+        }
+
+        // Renderiza páginas de PDF en alta resolución (escala 2.0) y guarda sus píxeles base
+        async function extractPdfPages(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                // Escala 2.2 para asegurar nitidez en textos pequeños del DNI al exportar
+                const viewport = page.getViewport({ scale: 2.2 });
+
+                const offscreenCanvas = document.createElement('canvas');
+                offscreenCanvas.width = viewport.width;
+                offscreenCanvas.height = viewport.height;
+                const ctx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+
+                await page.render({
+                    canvasContext: ctx,
+                    viewport: viewport
+                }).promise;
+
+                const imageData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+                state.rawPages.push({
+                    imageData,
+                    width: offscreenCanvas.width,
+                    height: offscreenCanvas.height
+                });
+            }
+        }
+
+        // Carga imágenes (JPG/PNG) como páginas
+        function extractImagePage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Limitar ancho máximo excesivo manteniendo alta calidad (máx 2200px)
+                        let w = img.width;
+                        let h = img.height;
+                        const maxDim = 2200;
+                        if (w > maxDim || h > maxDim) {
+                            const ratio = Math.min(maxDim / w, maxDim / h);
+                            w = Math.round(w * ratio);
+                            h = Math.round(h * ratio);
+                        }
+
+                        const offscreenCanvas = document.createElement('canvas');
+                        offscreenCanvas.width = w;
+                        offscreenCanvas.height = h;
+                        const ctx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+                        ctx.drawImage(img, 0, 0, w, h);
+
+                        const imageData = ctx.getImageData(0, 0, w, h);
+                        state.rawPages.push({ imageData, width: w, height: h });
+                        resolve();
+                    };
+                    img.onerror = reject;
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Aplica filtros a nivel de píxel y dibuja la marca de agua en cada canvas
+        function renderAllPages() {
+            if (state.rawPages.length === 0) return;
+
+            previewContainer.innerHTML = '';
+
+            state.rawPages.forEach((pageObj, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'w-full flex flex-col items-center space-y-2';
+
+                const label = document.createElement('div');
+                label.className = 'w-full max-w-2xl flex justify-between items-center text-xs font-mono text-gray-500 px-1';
+                label.innerHTML = `<span>Página ${index + 1} de ${state.rawPages.length}</span><span>${pageObj.width} × ${pageObj.height} px</span>`;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = pageObj.width;
+                canvas.height = pageObj.height;
+                canvas.className = 'w-full max-w-2xl h-auto rounded-xl border border-borderDark shadow-2xl bg-white';
+                canvas.dataset.pageIndex = index;
+
+                const ctx = canvas.getContext('2d');
+
+                // Clonar píxeles originales para manipulación no destructiva
+                const outputData = new ImageData(
+                    new Uint8ClampedArray(pageObj.imageData.data),
+                    pageObj.width,
+                    pageObj.height
+                );
+
+                // Aplicar filtro Blanco y Negro + Contraste a nivel de píxel
+                if (state.bwEnabled) {
+                    const data = outputData.data;
+                    const contrastFactor = state.contrast / 100;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        // Fórmula de luminancia perceptual Rec. 709
+                        let gray = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+                        
+                        // Aplicar ajuste de contraste centrado en gris medio (128)
+                        gray = ((gray - 128) * contrastFactor) + 128;
+                        gray = Math.max(0, Math.min(255, gray));
+
+                        data[i] = gray;     // R
+                        data[i + 1] = gray; // G
+                        data[i + 2] = gray; // B
+                    }
+                }
+
+                ctx.putImageData(outputData, 0, 0);
+
+                // Dibujar Marca de Agua Diagonal si hay texto
+                if (state.watermarkText.trim().length > 0) {
+                    drawDiagonalWatermark(ctx, pageObj.width, pageObj.height);
+                }
+
+                wrapper.appendChild(label);
+                wrapper.appendChild(canvas);
+                previewContainer.appendChild(wrapper);
+            });
+
+            statusIndicator.textContent = 'Vista previa actualizada';
+            statusIndicator.className = 'text-xs font-mono text-emeraldNeon';
+        }
+
+        // Divide el texto en 2 líneas equilibradas si está activado el modo multilínea
+        function getWatermarkLines(text) {
+            const trimmed = text.trim();
+            if (!state.multiLine || trimmed.length < 12) {
+                return [trimmed];
+            }
+            const mid = Math.floor(trimmed.length / 2);
+            let splitIndex = trimmed.lastIndexOf(' ', mid);
+            if (splitIndex === -1) {
+                splitIndex = trimmed.indexOf(' ', mid);
+            }
+            if (splitIndex === -1) {
+                return [trimmed];
+            }
+            return [
+                trimmed.slice(0, splitIndex).trim(),
+                trimmed.slice(splitIndex + 1).trim()
+            ];
+        }
+
+        // Dibuja la marca de agua en diagonal (-35 grados) en modo único o mosaico
+        function drawDiagonalWatermark(ctx, width, height) {
+            ctx.save();
+
+            const lines = getWatermarkLines(state.watermarkText);
+            const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b, '');
+            const angle = -Math.atan2(height, width); // Ángulo exacto de la diagonal del documento
+
+            // Escalar tamaño de fuente proporcionalmente al ancho real del canvas (referencia 1000px)
+            const scaleFactor = width / 1000;
+            let effectiveFontSize = Math.max(14, Math.round(state.fontSize * scaleFactor));
+
+            // Si está activo el auto-ajuste a diagonal, calculamos el tamaño exacto de esquina a esquina
+            if (state.autoFit && state.pattern === 'single') {
+                const diagonalLength = Math.sqrt(width * width + height * height) * 0.88;
+                const testSize = 100;
+                ctx.font = `700 ${testSize}px "Inter", Arial, sans-serif`;
+                const measuredWidth = ctx.measureText(longestLine).width || 1;
+                effectiveFontSize = Math.max(16, Math.round((diagonalLength / measuredWidth) * testSize));
+                
+                // Sincronizar el slider visualmente con el valor equivalente
+                const equivalentSliderVal = Math.min(300, Math.max(16, Math.round(effectiveFontSize / scaleFactor)));
+                sizeSlider.value = equivalentSliderVal;
+                sizeVal.textContent = `${equivalentSliderVal} px (Auto)`;
+            }
+
+            ctx.font = `700 ${effectiveFontSize}px "Inter", Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const lineHeight = effectiveFontSize * 1.18;
+
+            if (state.pattern === 'single') {
+                ctx.translate(width / 2, height / 2);
+                ctx.rotate(angle);
+
+                // Halo blanco sutil detrás del texto para garantizar legibilidad sobre zonas oscuras y claras
+                ctx.lineWidth = Math.max(2, effectiveFontSize * 0.06);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.85, state.opacity * 1.2)})`;
+                ctx.fillStyle = `rgba(15, 15, 15, ${state.opacity})`;
+
+                const totalHeight = (lines.length - 1) * lineHeight;
+                lines.forEach((line, idx) => {
+                    const yOffset = (idx * lineHeight) - (totalHeight / 2);
+                    ctx.strokeText(line, 0, yOffset);
+                    ctx.fillText(line, 0, yOffset);
+                });
+            } else {
+                // Patrón mosaico repetido cubriendo toda la diagonal del documento
+                const maxLineWidth = Math.max(...lines.map(l => ctx.measureText(l).width));
+                const stepX = maxLineWidth + (effectiveFontSize * 1.6);
+                const stepY = (lines.length * lineHeight) + (effectiveFontSize * 2.4);
+                const diagonal = Math.sqrt(width * width + height * height);
+
+                ctx.translate(width / 2, height / 2);
+                ctx.rotate(-35 * (Math.PI / 180));
+
+                ctx.lineWidth = Math.max(1.5, effectiveFontSize * 0.05);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.8, state.opacity * 1.1)})`;
+                ctx.fillStyle = `rgba(15, 15, 15, ${state.opacity})`;
+
+                let rowIndex = 0;
+                for (let y = -diagonal; y <= diagonal; y += stepY) {
+                    const offsetX = (rowIndex % 2 === 0) ? 0 : stepX / 2;
+                    for (let x = -diagonal; x <= diagonal; x += stepX) {
+                        lines.forEach((line, lIdx) => {
+                            const yLineOffset = y + (lIdx * lineHeight);
+                            ctx.strokeText(line, x + offsetX, yLineOffset);
+                            ctx.fillText(line, x + offsetX, yLineOffset);
+                        });
+                    }
+                    rowIndex++;
+                }
+            }
+
+            ctx.restore();
+        }
+
+        // Habilitar botón de descarga
+        function enableDownloadButton() {
+            downloadPdfBtn.disabled = false;
+            downloadPdfBtn.className = 'w-full py-3.5 px-5 rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all bg-emeraldNeon hover:brightness-110 text-black cursor-pointer shadow-[0_0_20px_rgba(0,255,102,0.25)]';
+        }
+
+        // Exportar todos los canvas procesados a un único PDF local usando jsPDF
+        downloadPdfBtn.addEventListener('click', () => {
+            const canvases = previewContainer.querySelectorAll('canvas');
+            if (canvases.length === 0) return;
+
+            try {
+                statusIndicator.textContent = 'Generando PDF...';
+                const { jsPDF } = window.jspdf;
+                let pdf = null;
+
+                canvases.forEach((canvas, idx) => {
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const orientation = imgWidth > imgHeight ? 'l' : 'p';
+
+                    if (idx === 0) {
+                        pdf = new jsPDF({
+                            orientation: orientation,
+                            unit: 'px',
+                            format: [imgWidth, imgHeight],
+                            compress: true
+                        });
+                    } else {
+                        pdf.addPage([imgWidth, imgHeight], orientation);
+                    }
+
+                    // JPEG calidad 0.92 ofrece nitidez perfecta para DNI con peso ligero para email
+                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                });
+
+                const finalFileName = `${state.fileName}_BN_protegido.pdf`;
+                pdf.save(finalFileName);
+
+                statusIndicator.textContent = 'PDF descargado';
+                showToast(`Descargado: ${finalFileName}`);
+            } catch (err) {
+                console.error('Error al generar PDF:', err);
+                showToast('Error al exportar el PDF.');
+            }
+        });
+
+        // Listeners de Controles en Tiempo Real
+        bwToggle.addEventListener('change', (e) => {
+            state.bwEnabled = e.target.checked;
+            renderAllPages();
+        });
+
+        contrastSlider.addEventListener('input', (e) => {
+            state.contrast = parseInt(e.target.value, 10);
+            contrastVal.textContent = `${state.contrast}%`;
+            renderAllPages();
+        });
+
+        watermarkText.addEventListener('input', (e) => {
+            state.watermarkText = e.target.value;
+            renderAllPages();
+        });
+
+        function updateAutoFitButtonUI() {
+            if (state.autoFit) {
+                fitDiagonalBtn.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-emeraldNeon text-black font-bold transition-all';
+            } else {
+                fitDiagonalBtn.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-emeraldDim border border-emeraldNeon/50 text-emeraldNeon hover:bg-emeraldNeon hover:text-black transition-all';
+            }
+        }
+
+        fitDiagonalBtn.addEventListener('click', () => {
+            state.autoFit = !state.autoFit;
+            if (state.autoFit && state.pattern !== 'single') {
+                state.pattern = 'single';
+                patternSingleBtn.className = 'pattern-btn active px-3 py-2 rounded-xl text-xs font-medium border border-emeraldNeon bg-emeraldDim text-emeraldNeon transition-all';
+                patternTiledBtn.className = 'pattern-btn px-3 py-2 rounded-xl text-xs font-medium border border-borderDark bg-surface text-gray-400 hover:text-white transition-all';
+            }
+            updateAutoFitButtonUI();
+            if (!state.autoFit) {
+                sizeVal.textContent = `${state.fontSize} px`;
+            }
+            renderAllPages();
+        });
+
+        multiLineToggle.addEventListener('change', (e) => {
+            state.multiLine = e.target.checked;
+            renderAllPages();
+        });
+
+        patternSingleBtn.addEventListener('click', () => {
+            state.pattern = 'single';
+            patternSingleBtn.className = 'pattern-btn active px-3 py-2 rounded-xl text-xs font-medium border border-emeraldNeon bg-emeraldDim text-emeraldNeon transition-all';
+            patternTiledBtn.className = 'pattern-btn px-3 py-2 rounded-xl text-xs font-medium border border-borderDark bg-surface text-gray-400 hover:text-white transition-all';
+            renderAllPages();
+        });
+
+        patternTiledBtn.addEventListener('click', () => {
+            state.pattern = 'tiled';
+            state.autoFit = false;
+            updateAutoFitButtonUI();
+            sizeVal.textContent = `${state.fontSize} px`;
+            patternTiledBtn.className = 'pattern-btn active px-3 py-2 rounded-xl text-xs font-medium border border-emeraldNeon bg-emeraldDim text-emeraldNeon transition-all';
+            patternSingleBtn.className = 'pattern-btn px-3 py-2 rounded-xl text-xs font-medium border border-borderDark bg-surface text-gray-400 hover:text-white transition-all';
+            renderAllPages();
+        });
+
+        sizeSlider.addEventListener('input', (e) => {
+            state.autoFit = false;
+            updateAutoFitButtonUI();
+            const val = parseInt(e.target.value, 10);
+            state.fontSize = val;
+            sizeVal.textContent = `${val} px`;
+            renderAllPages();
+        });
+    </script>
+</body>
+</html>
