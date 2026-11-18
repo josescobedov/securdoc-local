@@ -1,12 +1,12 @@
-# SecurDoc Local 📄🛡️
+# SecurDoc Local
 
 Herramienta web diseñada para proteger documentos sensibles (como DNI, NIE, pasaportes, facturas o contratos) antes de compartirlos por medios digitales. Aplica conversión a blanco y negro con ajuste de contraste y marcas de agua de seguridad diagonales, ejecutándose íntegramente en el navegador sin transferir archivos a ningún servidor externo.
 
-🌐 **Demo en vivo (GitHub Pages):** [https://josescobedov.github.io/securdoc-local/](https://josescobedov.github.io/securdoc-local/)
+**Demo en vivo (GitHub Pages):** [https://josescobedov.github.io/securdoc-local/](https://josescobedov.github.io/securdoc-local/)
 
 ---
 
-## 🔒 Privacidad y Seguridad
+## Privacidad y Seguridad
 
 - **Ejecución 100% en cliente:** Toda la manipulación de imágenes y páginas PDF ocurre en la memoria del navegador (usando Canvas API y WebAssembly/JS).
 - **Sin envíos a servidores:** No existen peticiones backend ni almacenamiento externo. Puedes desconectar internet y la herramienta seguirá funcionando.
@@ -14,7 +14,7 @@ Herramienta web diseñada para proteger documentos sensibles (como DNI, NIE, pas
 
 ---
 
-## 🚀 Características Principales
+## Características Principales
 
 1. **Formatos soportados:**
    - Documentos PDF multipágina.
@@ -35,7 +35,7 @@ Herramienta web diseñada para proteger documentos sensibles (como DNI, NIE, pas
 
 ---
 
-## 💻 Cómo utilizar el proyecto
+## Cómo utilizar el proyecto
 
 ### Uso local inmediato
 No requiere instalación de Node.js, compilación ni dependencias previas:
@@ -51,7 +51,7 @@ Para utilizarlo desde cualquier dispositivo o móvil:
 
 ---
 
-## 🛠️ Tecnologías empleadas
+## Tecnologías empleadas
 
 - **HTML5 & Vanilla JavaScript**: Lógica de eventos y procesamiento de Canvas en memoria.
 - **Tailwind CSS**: Estructura visual y componentes de interfaz.
@@ -60,6 +60,6 @@ Para utilizarlo desde cualquier dispositivo o móvil:
 
 ---
 
-## 📄 Licencia
+## Licencia
 
 Este proyecto se distribuye bajo términos de código abierto para uso personal y profesional libre.
